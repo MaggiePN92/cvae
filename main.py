@@ -1,9 +1,10 @@
-from train_loop import train_loop
+from training.train_loop import train_loop
 from cvae.cvae import CVAE
 from torchvision.datasets import MNIST
 from torchvision import transforms
 from torch.utils.data import DataLoader
 import torch 
+
 
 def main():
     # Local folder where MNIST will be stored
