@@ -40,7 +40,7 @@ class CVAE(nn.Module):
         cls_emb = self.get_cls_emb(c)
 
         # Concatenate cls embedding to the input
-        x = torch.cat((x, cls_emb), dim=1)
+        x = torch.cat((x, cls_emb), dim=1).to(x.device)
 
         # Get the mean, logvar, and cls token from the encoder
         mean, logvar, cls_token = self.encoder(x)
