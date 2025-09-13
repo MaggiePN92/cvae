@@ -1,32 +1,37 @@
-import matplotlib.pyplot as plt 
+import os
 import torch
 import torch.nn.functional as F
+from torchvision.utils import save_image
 
 
-def generate_img(conditioned_model, z_dim, device):
-    # Put model in evalulation mode
+def generate_img(
+        conditioned_model, z_dim, device, 
+        out_dir="generated_imgs", tau=0.5, 
+        seed=None
+    ):
     conditioned_model.eval()
+    g = torch.Generator(device=device)
+    if seed is not None:
+        g.manual_seed(seed)
 
-    # Select a class label
-    cls_label = 7
+    os.makedirs(out_dir, exist_ok=True)
 
     with torch.no_grad():
-        # Sample noise from N(0,I)
-        z = torch.randn(1, z_dim).to(device)
+        # 1) z ~ N(0, I)
+        z = torch.randn(1, z_dim, generator=g, device=device)
 
-        # Make a one-hot for the selected class label, which will act as the cls token
-        cls_token = F.one_hot(torch.tensor(cls_label).unsqueeze(0), num_classes=10).to(device)
+        # 2) preference vector [x1, 9, x2, x3, x4, x5]
+        c_raw = torch.randint(0, 10, (1, 6), generator=g, device=device, dtype=torch.float32)
+        c_raw[0, 1] = 9
+        c = torch.softmax(c_raw / tau, dim=1)
 
-        # Concatenate z and the cls token
-        z = torch.cat((z, cls_token), dim=1)
+        # 3) concat and decode
+        zc = torch.cat([z, c], dim=1)
+        x_hat = conditioned_model.decoder(zc).squeeze(0).cpu()
 
-        # Generate new image with the decoder
-        x_hat = conditioned_model.decoder(z)
-        x_hat = x_hat.squeeze(0).cpu().detach()
-
-    # Show generated image
-    plt.figure(figsize=(3,3))
-    plt.imshow(x_hat.permute(1,2,0), cmap=plt.get_cmap('gray'))
-    plt.title(f"A generated image of class={cls_label}")
-    plt.axis('off')
-    plt.show()
+    # 4) save image
+    # save_image expects (C,H,W) or (B,C,H,W); clamp for safety
+    filename = os.path.join(
+        out_dir, f"moira_{seed or torch.randint(0, 1_000_000, (1,)).item()}.png")
+    save_image(x_hat.clamp(0, 1), filename)
+    print(f"Saved {filename}")
