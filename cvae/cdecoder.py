@@ -33,5 +33,6 @@ class CDecoder(nn.Module):
         x = F.relu(self.deconv2(x)) # [B, base_ch//4, H, W]
 
         # final image projection
-        x = torch.sigmoid(self.to_img(x)) # [B, n_channels, H, W]
+        # x = torch.sigmoid(self.to_img(x)) # [B, n_channels, H, W]
+        x = self.to_img(x)
         return x

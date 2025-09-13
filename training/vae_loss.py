@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 
 
-def vae_loss(x, x_hat, mean, logvar):
+def vae_loss(x, x_hat, mean, logvar, beta):
     """
     Inputs:
         x       : [torch.tensor] Original sample
@@ -12,11 +12,7 @@ def vae_loss(x, x_hat, mean, logvar):
     """
 
     # Recontruction loss
-    reproduction_loss = F.mse_loss(x_hat, x, reduction="sum")
-
-    # KL divergence
-    KL_divergence = (-1/2) * (torch.sum((1 + logvar - torch.pow(mean, 2) - torch.exp(logvar))))
-
-    # Get the total loss
-    loss = reproduction_loss + KL_divergence
-    return loss
+    recon = F.mse_loss(x_hat, x, reduction="mean")
+    kl = -0.5 * torch.mean(1 + logvar - mean.pow(2) - logvar.exp())
+    loss = recon + beta * kl
+    return loss, recon, kl 

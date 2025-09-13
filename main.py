@@ -19,7 +19,9 @@ def main(batch_size = 128):
     ).to(device)
 
     trained_model = train_loop(
-        conditioned_model, data_loader, device)
+        conditioned_model, data_loader, device,
+        epochs=100
+    )
     
     generate_img(trained_model, z_dim, device, seed=42)
 

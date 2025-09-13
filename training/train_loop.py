@@ -2,7 +2,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 from torch.optim import Adam
 from .vae_loss import vae_loss
-
+import torch 
 
 def train_loop(
         conditioned_model, 
@@ -27,8 +27,15 @@ def train_loop(
             # Get x_hat, mean, logvar,and cls_token from the conditioned_model
             x_hat, mean, logvar, cls_token = conditioned_model(x, c)
 
+            # with torch.no_grad():
+            #     print("x range:", x.min().item(), "..", x.max().item())
+            #     print("x_hat range:", x_hat.min().item(), "..", x_hat.max().item())
+            
+        
             # Get vae loss
-            loss = vae_loss(x, x_hat, mean, logvar)
+            # beta schedule (example: linear warmup over 30 epochs)
+            beta = min(1.0, (epoch+1) / 30.0)
+            loss, recon, kl  = vae_loss(x, x_hat, mean, logvar, beta)
 
             # Get cross entropy loss for the cls token
             cls_loss = F.cross_entropy(cls_token, c.float(), reduction='sum')
@@ -41,7 +48,14 @@ def train_loop(
             optimizer.step()
 
             # Update progress bar
-            train_bar.set_description(f'Epoch [{epoch+1}/{epochs}]')
-            train_bar.set_postfix(loss = loss.item() / len(x))
-    
+            # train_bar.set_description(f'Epoch [{epoch+1}/{epochs}]')
+            # train_bar.set_postfix(loss = loss.item() / len(x))
+            train_bar.set_postfix({
+                "epoch":epoch,
+                "loss": f"{loss.item():.4e}",
+                "recon": f"{recon.item():.4e}",
+                "kl": f"{kl.item():.4e}",
+                "beta": f"{beta:.3}"
+            })
+
     return conditioned_model
