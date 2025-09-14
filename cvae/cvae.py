@@ -16,7 +16,11 @@ class CVAE(nn.Module):
         self.img_size = img_size
 
         self.encoder = CEncoder(z_dim, n_channels, img_size)
-        self.decoder = CDecoder(z_dim, n_classes, n_channels, img_size)
+        latent_hw = self.encoder.latent_hw
+        self.decoder = CDecoder(
+            z_dim, n_classes, n_channels, 
+            img_size, latent_hw, start_ch=128
+        )
         # Add learnable class token
         self.cls_param = nn.Parameter(torch.zeros(n_classes, *img_size))
 

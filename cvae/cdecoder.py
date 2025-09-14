@@ -1,38 +1,42 @@
-import torch
 import torch.nn as nn
+from .up_block import UpBlock
 import torch.nn.functional as F
 
 
 class CDecoder(nn.Module):
-    def __init__(self, z_dim, n_classes, n_channels, img_size, base_ch=32):
+    def __init__(
+            self, z_dim, n_classes, n_channels, 
+            img_size, latent_hw, start_ch=128
+        ):
         super().__init__()
-        H, W = img_size
-        h4, w4 = H // 4, W // 4
+        self.H, self.W = img_size
+        self.h0, self.w0 = latent_hw  # e.g. (24,32) after two downs
+        self.start_ch = start_ch
+        self.proj = nn.Linear(
+            z_dim + n_classes, start_ch * self.h0 * self.w0)
+        
+        # build enough up blocks to reach or exceed target
+        ups = []
+        ch = start_ch
+        curH, curW = self.h0, self.w0
+        while curH < self.H or curW < self.W:
+            nxt = max(32, ch // 2)
+            ups.append(UpBlock(ch, nxt))
+            ch = nxt
+            curH, curW = curH * 2, curW * 2
+        self.up_blocks = nn.ModuleList(ups)
 
-        # project z and c
-        self.proj = nn.Linear(z_dim + n_classes, base_ch * h4 * w4)
-
-        # upsample with ConvTranspose2d (stride=2 doubles spatial dims)
-        self.deconv1 = nn.ConvTranspose2d(base_ch, base_ch // 2, kernel_size=4, stride=2, padding=1) # H/2, W/2
-        self.deconv2 = nn.ConvTranspose2d(base_ch // 2, base_ch // 4, kernel_size=4, stride=2, padding=1) # H,W
-
-        self.to_img = nn.Conv2d(base_ch // 4, n_channels, kernel_size=3, padding=1)
-
-        self.h4, self.w4 = h4, w4
-        self.base_ch = base_ch
+        self.to_img = nn.Conv2d(ch, n_channels, 3, padding=1)
 
     def forward(self, z_cat):
-        B = z_cat.size(0)
-
-        # seed feature map
-        x = self.proj(z_cat) # [B, base_ch*h4*w4]
-        x = x.view(B, self.base_ch, self.h4, self.w4) # [B, base_ch, H/4, W/4]
-
-        # two upsampling deconvs
-        x = F.relu(self.deconv1(x)) # [B, base_ch//2, H/2, W/2]
-        x = F.relu(self.deconv2(x)) # [B, base_ch//4, H, W]
-
-        # final image projection
-        # x = torch.sigmoid(self.to_img(x)) # [B, n_channels, H, W]
-        x = self.to_img(x)
+        b = z_cat.size(0)
+        x = self.proj(z_cat).view(b, self.start_ch, self.h0, self.w0)
+        for up in self.up_blocks:
+            x = up(x)
+        if x.shape[-2:] != (self.H, self.W):
+            x = F.interpolate(
+                x, size=(self.H, self.W), 
+                mode='bilinear', align_corners=False
+            )
+        x = self.to_img(x)  # no sigmoid if training on normalized pixels
         return x

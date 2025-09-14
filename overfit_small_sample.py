@@ -28,6 +28,9 @@ def train_loop(
             c = c.to(device).reshape(x.size(0), n_classes)
 
             x_hat, mean, logvar, _ = model(x, c)
+            
+            assert x_hat.shape == x.shape,\
+                f"pred {tuple(x_hat.shape)} vs target {tuple(x.shape)}"
 
             # guard against NaNs in encoder outputs
             if torch.isnan(mean).any() or torch.isnan(logvar).any():
@@ -56,13 +59,13 @@ def train_loop(
     return model
 
 
-def main(batch_size=128, epochs=100, lr=3e-4, aux_cls_weight=0.0):
+def main(batch_size=8, epochs=100, lr=3e-4):
     data_loader = get_cars_dataloader(batch_size=batch_size)
 
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
     print("Device set as:", device)
 
-    z_dim = 2
+    z_dim = 32
     n_classes = 6
     conditioned_model = CVAE(
         z_dim=z_dim,
