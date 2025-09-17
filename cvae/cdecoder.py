@@ -6,11 +6,13 @@ import torch
 
 class CDecoder(nn.Module):
     def __init__(self, z_dim, n_classes, n_channels, 
-                 img_size, latent_hw, start_ch=128, skip_channels=None):
+                 img_size, latent_hw, start_ch=128, skip_channels=None,
+                 skip_drop_p = 0.5):
         super().__init__()
         self.H, self.W = img_size
         self.h0, self.w0 = latent_hw
         self.start_ch = start_ch
+        self.skip_drop_p = skip_drop_p
 
         self.proj = nn.Linear(z_dim + n_classes, start_ch * self.h0 * self.w0)
 
@@ -50,13 +52,15 @@ class CDecoder(nn.Module):
 
         for i, up in enumerate(self.up_blocks):
             x = up(x)
-            if i < len(self.fuse) and i < len(enc_rev):
-                skip = enc_rev[i]
-                if skip.shape[-2:] != x.shape[-2:]:
-                    skip = F.interpolate(skip, size=x.shape[-2:], mode='bilinear', align_corners=False)
-                x = torch.cat([x, skip], dim=1)
-                x = self.fuse[i](x)
-
+            use_skip = (i < len(self.fuse) and i < len(enc_rev))
+            if use_skip:
+                # stochastic skip dropout (train only)
+                if (not self.training) or (torch.rand(()) > self.skip_drop_p):
+                    skip = enc_rev[i]
+                    if skip.shape[-2:] != x.shape[-2:]:
+                        skip = F.interpolate(skip, size=x.shape[-2:], mode='bilinear', align_corners=False)
+                    x = torch.cat([x, skip], dim=1)
+                    x = self.fuse[i](x)
         if x.shape[-2:] != (self.H, self.W):
             x = F.interpolate(x, size=(self.H, self.W), mode='bilinear', align_corners=False)
         return self.to_img(x)
