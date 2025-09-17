@@ -23,12 +23,14 @@ class CVAE(nn.Module):
         
         self.encoder = CEncoder(
             z_dim=z_dim, n_channels=3, img_size=(96,128), ch=(64,128))
+        
         self.decoder = CDecoder(
             z_dim=z_dim, n_classes=6, n_channels=3,
             img_size=(96,128),
             latent_hw=self.encoder.latent_hw,
             start_ch=192,
-            skip_channels=[self.encoder.c1, self.encoder.c2],  # [64, 128]
+            skip_channels=[
+                self.encoder.c1, self.encoder.c2],  # [64, 128]
         )
 
         # Add learnable class token
@@ -57,7 +59,7 @@ class CVAE(nn.Module):
             x4, return_feats=self.return_feats)
         z0 = reparameterize_gaussian(mean, logvar)
         zK, logdet = self.flow(z0, cond=c_vec)
-        
+
         z_cat = torch.cat([zK, c_vec], dim=1)
         x_hat = self.decoder(z_cat, enc_feats=enc_feats)
         return x_hat, mean, logvar, logdet

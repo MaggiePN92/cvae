@@ -65,7 +65,7 @@ def main(batch_size=8, epochs=100, lr=3e-4):
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
     print("Device set as:", device)
 
-    z_dim = 32
+    z_dim = 8
     n_classes = 6
     conditioned_model = CVAE(
         z_dim=z_dim,
@@ -87,4 +87,3 @@ def main(batch_size=8, epochs=100, lr=3e-4):
 
 if __name__ == "__main__":
     main()
-
