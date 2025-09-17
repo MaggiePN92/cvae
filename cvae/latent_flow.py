@@ -11,6 +11,7 @@ class LatentFlow(nn.Module):
                 mask_even=(k%2==0), 
                 cond_dim=cond_dim) for k in range(K)
         ])
+        
     def forward(self, z, cond=None):
         logdet = z.new_zeros(z.size(0))
         for blk in self.blocks:
