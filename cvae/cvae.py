@@ -3,7 +3,7 @@ import torch.nn as nn
 from .cdecoder import CDecoder
 from .cencoder import CEncoder
 from .reparameterize_gaussian import reparameterize_gaussian
-
+from .latent_flow import LatentFlow
 
 class CVAE(nn.Module):
     """ Conditional Variational Auto-Encoder class. """
@@ -14,13 +14,22 @@ class CVAE(nn.Module):
         self.n_classes = n_classes
         self.n_channels = n_channels
         self.img_size = img_size
-
-        self.encoder = CEncoder(z_dim, n_channels, img_size)
-        latent_hw = self.encoder.latent_hw
+        
+        self.flow = LatentFlow(
+            dim=z_dim, cond_dim=n_classes, 
+            hidden=64, K=2)
+        
+        self.encoder = CEncoder(
+            z_dim=z_dim, n_channels=3, img_size=(96,128), 
+            ch=(64,128))
+        
         self.decoder = CDecoder(
-            z_dim, n_classes, n_channels, 
-            img_size, latent_hw, start_ch=128
+            z_dim=z_dim, n_classes=6, n_channels=3, 
+            img_size=(96,128), 
+            latent_hw=self.encoder.latent_hw, 
+            start_ch=192
         )
+
         # Add learnable class token
         self.cls_param = nn.Parameter(torch.zeros(n_classes, *img_size))
 
@@ -43,9 +52,8 @@ class CVAE(nn.Module):
         emb = self.get_cls_emb(c_vec) # [B,1,H,W]
         x4 = torch.cat([x, emb], dim=1) # [B, n_channels+1, H, W]
         mean, logvar = self.encoder(x4)
-        z = reparameterize_gaussian(mean, logvar) # [B, z_dim]
-        z_cat = torch.cat([z, c_vec], dim=1) # [B, z_dim + n_classes]
-        x_hat = self.decoder(z_cat) # [B, n_channels, H, W]
-        return x_hat, mean, logvar, c_vec
-
-
+        z0 = reparameterize_gaussian(mean, logvar)
+        zK, logdet = self.flow(z0, cond=c_vec)
+        z_cat = torch.cat([zK, c_vec], dim=1)
+        x_hat = self.decoder(z_cat)
+        return x_hat, mean, logvar, logdet 
