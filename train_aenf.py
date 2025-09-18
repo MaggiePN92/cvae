@@ -25,7 +25,7 @@ if test:
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 print("Device set as:", device)
 
-# stage 1
+# stage 1: Training the Auto Encoder - creating a latent space to sample from
 ae = CondAE(z_dim=z_dim, n_classes=6, n_channels=3, img_size=(96,128)).to(device)
 opt_ae = torch.optim.Adam(ae.parameters(), lr=3e-4)
 for epoch in range(n_epochs):
@@ -33,7 +33,7 @@ for epoch in range(n_epochs):
         ae, train_loader, opt_ae, device, lam=1e-3,
         num_epochs=n_epochs, epoch_idx=epoch)
 
-# stage 2
+# stage 2: Training the latent flow 
 flow = LatentFlow(dim=z_dim, cond_dim=6, hidden=128, K=4).to(device)
 opt_flow = torch.optim.Adam(flow.parameters(), lr=1e-3)
 for epoch in range(n_epochs):
@@ -41,7 +41,7 @@ for epoch in range(n_epochs):
         flow, ae, train_loader, opt_flow, device,
         num_epochs=n_epochs, epoch_idx=epoch)
 
-# sample
+# sample and generate images 
 c_raw = torch.tensor([[1,9,1,1,1,1]], dtype=torch.float32, device=device)
 x_gen = sample_images(ae, flow, c_raw, num=5, device=device)
 save_generated_images(x_gen, out_dir="aenf_output", num_images=5)
