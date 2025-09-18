@@ -1,6 +1,6 @@
 import torch
 from tqdm import tqdm
-
+from latent_flow import LatentFlow
 
 @torch.no_grad()
 def encode_batch(ae, x, c):
@@ -11,7 +11,7 @@ def encode_batch(ae, x, c):
 
 
 def train_flow_epoch(
-    flow,
+    flow : LatentFlow,
     ae,
     loader,
     opt,
@@ -21,7 +21,8 @@ def train_flow_epoch(
     num_epochs=None,
     log_grad_norm=False,
 ):
-    flow.train(); ae.eval()
+    flow.train() 
+    ae.eval()
     tot = 0.0
     n_samples = 0
 
@@ -33,11 +34,14 @@ def train_flow_epoch(
         c = c.to(device).reshape(x.size(0), n_classes)
 
         with torch.no_grad():
+            # retrieve latent space and prefrence vector 
             z, c_vec = encode_batch(ae, x, c)
 
         if not torch.isfinite(z).all():
             raise RuntimeError("NaN/Inf in z from AE during flow training")
 
+        # negative log likelihood
+        # adapting flow to latent space 
         nll = -flow.log_prob(z, cond=c_vec).mean()
 
         if not torch.isfinite(nll):
@@ -46,8 +50,10 @@ def train_flow_epoch(
         opt.zero_grad(set_to_none=True)
         nll.backward()
 
+        # clip grads to avoid exploiding gradients 
         if log_grad_norm:
-            total_grad_norm = torch.nn.utils.clip_grad_norm_(flow.parameters(), 1.0).item()
+            total_grad_norm = torch.nn.utils.clip_grad_norm_(
+                flow.parameters(), 1.0).item()
         else:
             torch.nn.utils.clip_grad_norm_(flow.parameters(), 1.0)
             total_grad_norm = None

@@ -25,7 +25,7 @@ if test:
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 print("Device set as:", device)
 
-# stage 1
+# stage 1: Training the Auto Encoder - creating a latent space to sample from
 ae = CondAE(z_dim=z_dim, n_classes=6, n_channels=3, img_size=(96,128)).to(device)
 opt_ae = torch.optim.Adam(ae.parameters(), lr=3e-4)
 for epoch in range(n_epochs):

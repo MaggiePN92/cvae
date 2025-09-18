@@ -23,19 +23,30 @@ class LatentFlow(nn.Module):
         return z, logdet
 
     def log_prob(self, z, cond=None):
+        # map z into gauss with invertible transformations 
+        # logdet is log-determinant of the Jacobian 
         u, logdet = self.forward(z, cond) # z -> base u
-        # log N(u;0,I) = -0.5*(||u||^2 + D log(2pi))
+        # log-density of standard gauss
         log_pu = -0.5*(u.pow(2).sum(dim=1) + self.dim*math.log(2*math.pi))
         return log_pu + logdet  
     
     @torch.no_grad()
     def inverse(self, u, cond=None):
+        # inverting the applied transformations to u 
         for blk in reversed(self.blocks):
             u = blk.inverse(u, cond)
         return u
 
     @torch.no_grad()
     def sample(self, num_samples, cond, device=None):
+        """
+        Sample latent codes z from the flow.
+
+        This reverses the training direction: start with u ~ N(0,I),
+        then apply the inverse flow to map u -> z. The resulting z
+        lies in the same distribution as AE-encoded latents (given cond),
+        and can be decoded by the autoencoder to generate images.
+        """
         if device is None: device = cond.device
         u = torch.randn(num_samples, self.dim, device=device)
         # if cond is [1,C] and num_samples>1, expand it
