@@ -5,6 +5,8 @@ from utils.generate_img import generate_img
 from torch.optim import Adam
 from tqdm import tqdm
 from training.vae_loss import vae_loss
+from torch.utils.data import Subset
+from cvae.latent_flow import LatentFlow
 
 
 def train_loop(
@@ -16,9 +18,9 @@ def train_loop(
         lr=3e-4,
         n_classes=6
     ):
-    model = conditioned_model.to(device)
-    optimizer = opt_alg(model.parameters(), lr=lr)
-    model.train()
+    cvae = conditioned_model.to(device)
+    optimizer = opt_alg(cvae.parameters(), lr=lr)
+    cvae.train()
 
     for epoch in range(epochs):
         train_bar = tqdm(train_loader, desc=f"epoch {epoch+1}/{epochs}")
@@ -27,7 +29,7 @@ def train_loop(
             # ensure shape [B, n_classes]; never squeeze away batch dim
             c = c.to(device).reshape(x.size(0), n_classes)
 
-            x_hat, mean, logvar, _ = model(x, c)
+            x_hat, mean, logvar = cvae(x, c)
             
             assert x_hat.shape == x.shape,\
                 f"pred {tuple(x_hat.shape)} vs target {tuple(x.shape)}"
@@ -46,7 +48,7 @@ def train_loop(
             
             optimizer.zero_grad()
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            torch.nn.utils.clip_grad_norm_(cvae.parameters(), 1.0)
             optimizer.step()
 
             train_bar.set_postfix({
@@ -56,11 +58,21 @@ def train_loop(
                 "beta": f"{beta:.3f}"
             })
 
-    return model
+    return cvae
 
 
-def main(batch_size=8, epochs=100, lr=3e-4):
-    data_loader = get_cars_dataloader(batch_size=batch_size)
+def main(batch_size=8, epochs=100, lr=3e-4, test = True, test_samples=100):
+    train_loader = get_cars_dataloader(batch_size=batch_size)
+    
+    if test:
+        dataset = train_loader.dataset
+        epochs = 5
+        hidden_flow = 12
+        k = 2
+        small_idx = list(range(test_samples))
+        small_ds = Subset(dataset, small_idx)
+        train_loader = torch.utils.data.DataLoader(
+            small_ds, batch_size=32, shuffle=True)
 
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
     print("Device set as:", device)
@@ -74,16 +86,23 @@ def main(batch_size=8, epochs=100, lr=3e-4):
         img_size=[96, 128]
     ).to(device)
 
-    trained_model = train_loop(
+    trained_cvae = train_loop(
         conditioned_model=conditioned_model,
-        train_loader=data_loader,
+        train_loader=train_loader,
         device=device,
         epochs=epochs,
         lr=lr,
         n_classes=n_classes
     )
 
-    generate_img(trained_model, z_dim, device, seed=42)
+    flow = LatentFlow(
+        z_dim, cond_dim=6, hidden=hidden_flow, K=k).to(device)
+    for epoch in range(epochs):
+        flow_loss = train_flow(flow)
+
+
+def train_flow():
+    pass 
 
 if __name__ == "__main__":
     main()

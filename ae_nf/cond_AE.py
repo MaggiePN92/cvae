@@ -16,7 +16,7 @@ class CondAE(nn.Module):
         self.decoder = CDecoder(z_dim=z_dim, n_classes=n_classes, n_channels=n_channels,
                                 img_size=img_size, latent_hw=self.encoder.latent_hw, start_ch=192)
 
-        # learnable spatial class embedding (keep if you like it)
+        # learnable spatial class embedding
         self.cls_param = nn.Parameter(torch.zeros(n_classes, *img_size))
 
     def scale_class_vec(self, c, sharpness=0.5):

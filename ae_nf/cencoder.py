@@ -3,12 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class CEncoder(nn.Module):
-    """
-    Deterministic encoder for AE+NF.
-    - Input x already concatenated with a 1-channel class embedding (your get_cls_emb)
-      so in_channels = n_channels + 1.
-    - Returns: z (and optionally pyramid features for decoder skips).
-    """
     def __init__(self, z_dim, n_channels, img_size, ch=(16, 32)):
         super().__init__()
         H, W = img_size

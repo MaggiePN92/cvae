@@ -5,6 +5,7 @@ from .cencoder import CEncoder
 from .reparameterize_gaussian import reparameterize_gaussian
 from .latent_flow import LatentFlow
 
+
 class CVAE(nn.Module):
     """ Conditional Variational Auto-Encoder class. """
 
@@ -46,11 +47,6 @@ class CVAE(nn.Module):
         return emb.unsqueeze(1)
      
     def forward(self, x, c):
-        """
-        Args:
-            x   : [torch.Tensor] Image input of shape [batch_size, n_channels, *img_size]
-            c   : [torch.Tensor] Class labels for x of shape [batch_size], where the class in indicated by a
-        """
         c_vec = self.scale_class_vec(c) # [B, n_classes] in [0,1]
         emb = self.get_cls_emb(c_vec) # [B,1,H,W]
         x4 = torch.cat([x, emb], dim=1) # [B, n_channels+1, H, W]
@@ -58,8 +54,7 @@ class CVAE(nn.Module):
         mean, logvar, enc_feats = self.encoder(
             x4, return_feats=self.return_feats)
         z0 = reparameterize_gaussian(mean, logvar)
-        zK, logdet = self.flow(z0, cond=c_vec)
 
-        z_cat = torch.cat([zK, c_vec], dim=1)
+        z_cat = torch.cat([z0, c_vec], dim=1)
         x_hat = self.decoder(z_cat, enc_feats=enc_feats)
-        return x_hat, mean, logvar, logdet
+        return x_hat, mean, logvar
