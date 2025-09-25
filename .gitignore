@@ -1,5 +1,5 @@
 .venv
-data/CarRecs
-data/MNIST
-!data/read_data.py
+autoencoder_nf/data/CarRecs
+autoencoder_nf/data/MNIST
+!autoencoder_nf/data/read_data.py
 *__pycache__
