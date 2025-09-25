@@ -1,7 +1,5 @@
 # g09-p2
 
-# How to train a model
-To train a model simply run ```python main.py``` in your terminal. 
 
 # Setup env
 Make sure to use Python 3.10 to match the pytorch image used in the docker image. 
