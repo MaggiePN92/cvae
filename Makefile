@@ -12,6 +12,7 @@ pull:
 	docker pull $(IMAGE)
 
 docker:
+	- docker start $(CONTAINER_NAME) >/dev/null 2>&1 || \
 	docker run -d -i \
 		-v $(PWD):$(PROJECT_PATH) \
 		-w $(PROJECT_PATH) \
@@ -19,7 +20,7 @@ docker:
 		$(IMAGE)
 
 install:
-	$(RUN) pip install --user -r requirements.txt
+	$(RUN) pip install --user -r docker-requirements.txt
 
 run:
 	$(RUN) python validate_project2.py

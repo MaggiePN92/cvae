@@ -85,4 +85,4 @@ def test_load_my_models():
     return torch.allclose(pred_images, images, atol=1e-5)
 
 if __name__ == '__main__':
-    print(test_load_my_models())
+    test_load_my_models()
