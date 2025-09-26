@@ -20,7 +20,7 @@ if test:
     dataset = train_loader.dataset
     small_idx = list(range(n_samples))
     small_ds = Subset(dataset, small_idx)
-    train_loader = torch.utils.data.DataLoader(small_ds, batch_size=batch_size, shuffle=True)
+    train_loader = torch.utils.data.DataLoader(small_ds, batch_size=32, shuffle=True)
 
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 print("Device set as:", device)
@@ -43,5 +43,5 @@ for epoch in range(n_epochs):
 
 # sample and generate images 
 c_raw = torch.tensor([[1,9,1,1,1,1]], dtype=torch.float32, device=device)
-x_gen = sample_images(ae, flow, c_raw, num=5, device=device)
-save_generated_images(x_gen, out_dir="aenf_output", num_images=5)
+x_gen = sample_images(ae, flow, c_raw, num=10, device=device)
+save_generated_images(x_gen, out_dir="aenf_output", num_images=10)
