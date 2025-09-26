@@ -3,7 +3,6 @@ from torch.optim import Adam
 from tqdm import tqdm
 from .vae_loss import vae_loss
 
-
 def train_loop(model, train_loader, device, epochs=10, lr=1e-4):
     # adam optimizer
     optimizer = Adam(model.parameters(), lr=lr)
