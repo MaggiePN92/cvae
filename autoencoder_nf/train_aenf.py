@@ -20,7 +20,7 @@ if test:
     dataset = train_loader.dataset
     small_idx = list(range(n_samples))
     small_ds = Subset(dataset, small_idx)
-    train_loader = torch.utils.data.DataLoader(small_ds, batch_size=32, shuffle=True)
+    train_loader = torch.utils.data.DataLoader(small_ds, batch_size=batch_size, shuffle=True)
 
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 print("Device set as:", device)

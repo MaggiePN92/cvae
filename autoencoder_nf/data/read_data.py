@@ -1,65 +1,44 @@
-import quix
+
+import quix # For quixdata public repo , use import quixdata as quix
 import torchvision.transforms as T
 from torch.utils.data import DataLoader
-import torch
 
-def process_scores(scores):
-    # just get moira and ferdinando scores
-    scores = scores.squeeze()
-    if scores.dim() == 1:
-        scores = scores.unsqueeze(0)
-    
-    # moira is index 1, ferdinando is index 3
-    moira_ferdinando = scores[:, [1, 3]]
-    
-    # normalize to 0-1
-    moira_ferdinando = moira_ferdinando / 9.0
-    
-    if moira_ferdinando.dim() > 2:
-        moira_ferdinando = moira_ferdinando.squeeze()
-    
-    return moira_ferdinando
 
 def get_cars_dataloader(datapath="./data/", batch_size=64):
-    # imagenet normalization
-    in_mean = [0.485, 0.456, 0.406]
-    in_std = [0.229, 0.224, 0.225]
+    # Define mean and std from ImageNet data
+    in_mean = [0.485 , 0.456 , 0.406]
+    in_std = [0.229 , 0.224, 0.225]
 
-    # transforms
-    postprocess = (
-        T.Compose([
-            T.ToTensor(),
-            T.Normalize(in_mean, in_std),
+    # Define postprocessing / transform of data modalities
+    postprocess = ( # Create tuple for image and class ...
+        T.Compose ([ # Handles processing of the .jpg image
+            T.ToTensor (), # Convert from PIL image to torch.Tensor
+            T.Normalize(in_mean , in_std), # Normalize image to correct mean/std.
         ]),
-        T.ToTensor(),
+        T.ToTensor(), # Convert .scores.npy file to tensor.
     )
 
-    # load data
+    # Load training data
     data = quix.QuixDataset(
         'CarRecs',
-        datapath,
-        override_extensions=['jpg', 'scores.npy']
-    ).map_tuple(*postprocess)
+        datapath ,
+        override_extensions =[ # Sets the order of the modalities:
+            'jpg', # ... load image first ,
+            'scores.npy' # ... load scores second.
+        ],
+    ).map_tuple (* postprocess)
 
-    print("data loaded:", data)
+    print("Data read:")
+    print(data)
 
-    # custom dataset wrapper
-    class ProcessedDataset:
-        def __init__(self, dataset):
-            self.dataset = dataset
-        
-        def __len__(self):
-            return len(self.dataset)
-        
-        def __getitem__(self, idx):
-            image, scores = self.dataset[idx]
-            processed_scores = process_scores(scores)
-            if processed_scores.dim() > 1:
-                processed_scores = processed_scores.squeeze()
-            return image, processed_scores
-
-    processed_data = ProcessedDataset(data)
-
-    with processed_data.dataset.shufflecontext():
-        data_loader = DataLoader(dataset=processed_data, batch_size=batch_size)
+    with data.shufflecontext():
+        data_loader = DataLoader(
+            dataset=data, batch_size=batch_size)
     return data_loader
+
+
+if __name__ == "__main__":
+    dataloader = get_cars_dataloader()
+    for x, a in dataloader:
+        print(x.shape, a.shape)
+        break

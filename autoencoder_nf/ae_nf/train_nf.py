@@ -1,6 +1,6 @@
 import torch
 from tqdm import tqdm
-from latent_flow import LatentFlow
+from .latent_flow import LatentFlow
 
 @torch.no_grad()
 def encode_batch(ae, x, c):
