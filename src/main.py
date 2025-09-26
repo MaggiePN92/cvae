@@ -29,9 +29,11 @@ def main(test = False):
 
     trained_model = train_loop(model, data_loader, device, epochs=epochs)
     
+    torch.save(trained_model.state_dict(), "final_model.pth")
+
     generate_img(trained_model, z_dim, device, seed=42, out_dir=out_dir)
     
     print("done!")
 
 if __name__ == "__main__":
-    main(test = True)
+    main()
