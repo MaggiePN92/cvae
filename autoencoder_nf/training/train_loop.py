@@ -1,61 +1,42 @@
-import torch.nn.functional as F
-from tqdm import tqdm
+import torch
 from torch.optim import Adam
+from tqdm import tqdm
 from .vae_loss import vae_loss
-import torch 
 
-def train_loop(
-        conditioned_model, 
-        train_loader, 
-        device,
-        opt_alg=Adam, 
-        epochs=10, 
-        lr=0.01,
-    ):
-    optimizer = opt_alg(conditioned_model.parameters(), lr = lr)
-
-    # Train for a few epochs
-    conditioned_model.train()
-
+def train_loop(model, train_loader, device, epochs=10, lr=1e-4):
+    # adam optimizer
+    optimizer = Adam(model.parameters(), lr=lr)
+    
+    model.train()
+    
     for epoch in range(epochs):
-        train_bar = tqdm(iterable=train_loader) # Progress bar
+        train_bar = tqdm(train_loader, desc=f"epoch {epoch+1}/{epochs}")
         
-        for _, (x, c) in enumerate(train_bar):
+        for batch_idx, (x, c) in enumerate(train_bar):
             x = x.to(device)
-            # can break if batch_size=1
-            c = c.squeeze().to(device)
-            # Get x_hat, mean, logvar,and cls_token from the conditioned_model
-            x_hat, mean, logvar, cls_token = conditioned_model(x, c)
-
-            # with torch.no_grad():
-            #     print("x range:", x.min().item(), "..", x.max().item())
-            #     print("x_hat range:", x_hat.min().item(), "..", x_hat.max().item())
+            c = c.to(device)
             
-        
-            # Get vae loss
-            # beta schedule (example: linear warmup over 30 epochs)
-            beta = min(1.0, (epoch+1) / 30.0)
-            loss, recon, kl  = vae_loss(x, x_hat, mean, logvar, beta)
-
-            # Get cross entropy loss for the cls token
-            cls_loss = F.cross_entropy(cls_token, c.float(), reduction='sum')
-            # Add the losses as a weighted sum. NB: We weight the cls_loss by 10 here, but feel free to tweak it.
-            loss = loss + cls_loss * 10
+            # forward pass
+            x_hat, mean, logvar, c_out = model(x, c)
             
-            # Update model parameters based on loss
+            # beta schedule - start low, increase over time
+            beta = min(1.0, (epoch + 1) / 30.0)
+            
+            # compute loss
+            loss, recon, kl = vae_loss(x, x_hat, mean, logvar, beta)
+            
+            # backward pass
             optimizer.zero_grad()
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
-
-            # Update progress bar
-            # train_bar.set_description(f'Epoch [{epoch+1}/{epochs}]')
-            # train_bar.set_postfix(loss = loss.item() / len(x))
+            
+            # update progress bar
             train_bar.set_postfix({
-                "epoch":epoch,
                 "loss": f"{loss.item():.4e}",
                 "recon": f"{recon.item():.4e}",
                 "kl": f"{kl.item():.4e}",
-                "beta": f"{beta:.3}"
+                "beta": f"{beta:.3f}"
             })
-
-    return conditioned_model
+    
+    return model
