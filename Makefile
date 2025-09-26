@@ -1,7 +1,7 @@
 # Config
 IMAGE := pytorch/pytorch
 CONTAINER_NAME := in5310
-PROJECT_PATH := /project1
+PROJECT_PATH := /project2
 RUN := docker exec -it $(CONTAINER_NAME)
 
 .PHONY: all pull docker install run clean
@@ -22,7 +22,7 @@ install:
 	$(RUN) pip install --user -r requirements.txt
 
 run:
-	$(RUN) python validate_project1.py
+	$(RUN) python validate_project2.py
 
 clean:
 	- docker stop $(CONTAINER_NAME)
