@@ -3,5 +3,6 @@ autoencoder_nf/data/CarRecs
 autoencoder_nf/data/MNIST
 !autoencoder_nf/data/read_data.py
 *__pycache__
-data/CarRecs
-data/MNIST
+*/data/CarRecs
+*/data/MNIST
+*.DS_Store
