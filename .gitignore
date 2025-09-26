@@ -5,3 +5,4 @@ autoencoder_nf/data/MNIST
 *__pycache__
 */data/CarRecs
 */data/MNIST
+*.DS_Store
