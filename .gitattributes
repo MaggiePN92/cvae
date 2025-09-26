@@ -2,3 +2,4 @@ src/generated_imgs/* binary
 *.pth binary
 *.png binary
 output/* binary
+vq_vae/output/* binary
