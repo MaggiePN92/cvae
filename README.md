@@ -1,5 +1,5 @@
 # g09-p2
-
+The src dir has the "main" model which is a CVAE model. This is the one that is used for inference in the Docker container. Outside the src dir we have two more models that we also experimented with. 
 
 # Setup env
 Make sure to use Python 3.10 to match the pytorch image used in the docker image. 
